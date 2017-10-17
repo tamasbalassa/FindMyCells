@@ -1,8 +1,10 @@
 import sys
 sys.path.append('../AI')
-from PyQt5.QtWidgets import QWidget, QToolTip, QPushButton, QApplication, QFileDialog, QLabel
-from PyQt5.QtGui import QFont, QPixmap
-from predict_image import predict_one
+sys.path.append('../Utils')
+from PyQt5.QtWidgets import QWidget, QToolTip, QPushButton, QApplication, QFileDialog
+from PyQt5.QtGui import QFont
+from predict_image_DIGITS import predict_one
+from imageUtils import switch_background, drawRect, set_image
 
 
 class MainWindow(QWidget):
@@ -10,10 +12,12 @@ class MainWindow(QWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
                
-        global global_image 
-        global_image = ''
+        global global_image_path_list, global_pixmap_list 
+        global_image_path_list = []
+        global_pixmap_list = []
         
-        self.setGeometry(200, 50, 1500, 950)        
+        self.setGeometry(200, 50, 1500, 950)
+        self.labels = []
         self.initUI()
         
         
@@ -23,13 +27,9 @@ class MainWindow(QWidget):
         self.setWindowTitle('FindMyCell')
         
         
-        # defaul background
-        background_image = QLabel(self)
-        background_image.setGeometry(150, 50, 400, 200)
-        pixmap = QPixmap('..\Utils\FMC.png')
-        background_image.setPixmap(pixmap)
-        background_image.resize(1200, 820)
-        background_image.show()
+        # defaul background        
+        background_image, pixmap = set_image(self, '..\Utils\FMC.png', mode='Single')
+        switch_background(self, background_image)
         
         # load button
         load_btn = QPushButton('Load', self)
@@ -48,29 +48,35 @@ class MainWindow(QWidget):
         
     def loadbutton(self):      
 
-        global global_image
+        global global_image_path_list, global_pixmap_list
+        global_image_path_list = []
+        global_pixmap_list = []
         
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;Python Files (*.py)", options=options)
-               
-        pic = QLabel(self)        
-        pic.setGeometry(150, 50, 400, 200)
-        pixmap = QPixmap(fileName)
-        pic.setPixmap(pixmap)
-        pic.resize(1200, 820)
-        pic.show()
         
-        global_image = fileName
+        
+        pic, pixmap = set_image(self, fileName, mode='Single')
+        switch_background(self, pic)
+        
+        global_image_path_list.append(fileName)
+        global_pixmap_list.append(pixmap)
         
     def predictbutton(self):
                 
-        global global_image
-        if len(global_image) > 0:
-            coverage = predict_one(global_image, 1) # TODO parameter
-            print coverage
+        global global_image_path_list, global_pixmap_list
+        if (type(global_image_path_list) is list) and (type(global_pixmap_list) is list):
+            
+            rectangles, regprops = predict_one(global_image_path_list, 1) # TODO parameter
+            drawRect(global_pixmap_list[-1], regprops)
+            
+            pic, pm = set_image(self, global_pixmap_list[-1], mode='Pixmap')
+            switch_background(self, pic)
+            
+            print regprops
         else:
-            print 'NO'
+            print 'NO prediction'
         
         
         
