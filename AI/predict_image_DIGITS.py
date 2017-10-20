@@ -1,3 +1,5 @@
+import sys
+sys.path.append('../Utils')
 import numpy as np
 np.set_printoptions(threshold=np.nan)
 import caffe
@@ -8,6 +10,7 @@ import PIL.Image
 import scipy.misc
 from skimage.measure import label, regionprops
 from scipy.misc import imresize
+import settings
 
 def predict_one(img,gpu):
 
@@ -18,8 +21,8 @@ def predict_one(img,gpu):
         caffe.set_mode_cpu()    
     
     
-    caffemodel = '../AI/snapshot_iter_53928.caffemodel'
-    deploy_file = '../AI/deploy_krisztian.prototxt'
+    caffemodel = '../AI/snapshot_iter_335100.caffemodel'
+    deploy_file = '../AI/deploy_ilida.prototxt'
     net = caffe.Net(deploy_file, caffemodel, caffe.TEST)
     #net = get_net(caffemodel, deploy_file, gpu)
     
@@ -69,32 +72,23 @@ def forward_pass(images, net, transformer, batch_size=None):
         output = net.forward()[net.outputs[0]]
         
         
-        y = net.blobs['coverage'].data[0,0]
-        y = imresize(y, [850, 1200], mode='F')
-        low_values_flags = y < 0.001
-        high_values_flags = y >= 0.001
-        y[low_values_flags] = 0
-        y[high_values_flags] = 1
-        y_int = y.astype(int)
-        label_img = label(y_int)
-        x = regionprops(label_img)
-        
-        #x_multiplier = net.blobs['data'].data.shape[3] / net.blobs['coverage'].data[0,0].shape[1]
-        #y_multiplier = net.blobs['data'].data.shape[2] / net.blobs['coverage'].data[0,0].shape[0]
-        #print x_multiplier
-        #print y_multiplier
-        if len(x) > 0:
-            for one_rect in x:
-                y0, x0 = one_rect.centroid
-                #y1 = y0 * y_multiplier
-                #x1 = x0 * x_multiplier
-                regprops.append([x0,y0])
-                #print y0, x0
-            
 # =============================================================================
-#         y1 = net.blobs['bboxes'].data
-#         print y1.shape
+#         y = net.blobs['coverage'].data[0,0]
+#         y = imresize(y, [850, 1200], mode='F')
+#         low_values_flags = y < 0.001
+#         high_values_flags = y >= 0.001
+#         y[low_values_flags] = 0
+#         y[high_values_flags] = 1
+#         y_int = y.astype(int)
+#         label_img = label(y_int)
+#         x = regionprops(label_img)
+#         
+#         if len(x) > 0:
+#             for one_rect in x:
+#                 y0, x0 = one_rect.centroid
+#                 regprops.append([x0,y0])
 # =============================================================================
+                
         end = time.time()
         if scores is None:
             scores = np.copy(output)
@@ -102,7 +96,6 @@ def forward_pass(images, net, transformer, batch_size=None):
             scores = np.vstack((scores, output))
         print 'Processed %s/%s images in %f seconds ...' % (len(scores), len(caffe_images), (end - start))
 
-    print scores
     return scores, regprops
 
 def get_transformer(deploy_file):
@@ -163,10 +156,13 @@ def classify(net, deploy_file, image_files,
     else:
         raise ValueError('Invalid number for channels: %s' % channels)
     
+        
     images = [load_image(image_file, height, width, mode) for image_file in image_files] #- this works if we have multiple images
     #images = load_image(image_files, height, width,mode)
     #labels = read_labels(labels_file)
-
+    
+    settings.gInputWidth = width
+    settings.gInputHeight = height
     # Classify the image
     scores, regprops = forward_pass(images, net, transformer, batch_size=batch_size)
 
@@ -187,8 +183,9 @@ def classify(net, deploy_file, image_files,
                 int(round(bottom)),
                 confidence,
             )
-            
+           
             rects.append([left, top, right, bottom])
+            #rects.append([lt[0], lt[1], rb[0], rb[1]])
                  
     return rects, regprops
 
@@ -208,7 +205,6 @@ def load_image(path, height, width, mode='RGB'):
     mode -- the PIL mode that the image should be converted to
         (RGB for color or L for grayscale)
     """
-    print path
     image = PIL.Image.open(path)
     image = image.convert(mode)
     image = np.array(image)

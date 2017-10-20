@@ -1,10 +1,11 @@
 import sys
 sys.path.append('../AI')
 sys.path.append('../Utils')
-from PyQt5.QtWidgets import QWidget, QToolTip, QPushButton, QApplication, QFileDialog
+from PyQt5.QtWidgets import QWidget, QToolTip, QPushButton, QApplication, QFileDialog, QFormLayout, QHBoxLayout, QGroupBox, QVBoxLayout, QScrollBar
 from PyQt5.QtGui import QFont
 from predict_image_DIGITS import predict_one
 from imageUtils import switch_background, drawRect, set_image
+import settings
 
 
 class MainWindow(QWidget):
@@ -12,9 +13,12 @@ class MainWindow(QWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
                
-        global global_image_path_list, global_pixmap_list 
+        global global_image_path_list
         global_image_path_list = []
-        global_pixmap_list = []
+        
+        self.wheelValue = 0
+        
+        settings.init()
         
         self.setGeometry(200, 50, 1500, 950)
         self.labels = []
@@ -26,60 +30,75 @@ class MainWindow(QWidget):
         QToolTip.setFont(QFont('SansSerif', 10))
         self.setWindowTitle('FindMyCell')
         
-        
-        # defaul background        
-        background_image, pixmap = set_image(self, '..\Utils\FMC.png', mode='Single')
-        switch_background(self, background_image)
-        
-        # load button
+        hbox = QHBoxLayout()
+        groupBox1 = QGroupBox("Menu", self)
+        vbox = QVBoxLayout(groupBox1)
+        flay = QFormLayout()
         load_btn = QPushButton('Load', self)
         load_btn.clicked.connect(self.loadbutton)
-        load_btn.resize(load_btn.sizeHint())
-        load_btn.move(28, 150)    
+        flay.addRow(load_btn)
+        vbox.addWidget(load_btn, 1)
         
-        # predict button
         predict_btn = QPushButton('Predict', self)
         predict_btn.clicked.connect(self.predictbutton)
-        predict_btn.resize(predict_btn.sizeHint())
-        predict_btn.move(28, 200)
+        flay.addRow(predict_btn)
+        vbox.addWidget(predict_btn, 1)        
+        vbox.addLayout(flay, 1)
         
+        hbox.addWidget(groupBox1, 1)
         
+        vbox2 = QVBoxLayout()
+        groupBox2 = QGroupBox("Image", self)
+           
+        vbox3 = QHBoxLayout(groupBox2)        
+        vbox2.addWidget(groupBox2)
+        hbox.addLayout(vbox2, 10)        
+        
+        self.vbox = vbox3        
+        
+        # defaul background 
+        pixmap = set_image(self, '..\Utils\FMC.png', mode='Single')
+        switch_background(self, pixmap, mode='Start')
+        
+        self.s1 = QScrollBar()
+        self.s1.setMaximum(255)
+        vbox3.addWidget(self.s1, 1)        
+        
+        self.setLayout(hbox)
         self.show()
         
-    def loadbutton(self):      
-
-        global global_image_path_list, global_pixmap_list
+    def loadbutton(self):
+        
+        global global_image_path_list
         global_image_path_list = []
-        global_pixmap_list = []
         
         options = QFileDialog.Options()
         options |= QFileDialog.DontUseNativeDialog
         fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;Python Files (*.py)", options=options)
-        
-        
-        pic, pixmap = set_image(self, fileName, mode='Single')
-        switch_background(self, pic)
+
+        pixmap = set_image(self, fileName, mode='Single')
+        switch_background(self, pixmap)
         
         global_image_path_list.append(fileName)
-        global_pixmap_list.append(pixmap)
         
-    def predictbutton(self):
-                
-        global global_image_path_list, global_pixmap_list
-        if (type(global_image_path_list) is list) and (type(global_pixmap_list) is list):
-            
+    def predictbutton(self):       
+        
+        pixmapToPredict = self.vbox.itemAt(0).widget().pixmap()
+        if (type(global_image_path_list) is list):
             rectangles, regprops = predict_one(global_image_path_list, 1) # TODO parameter
-            drawRect(global_pixmap_list[-1], regprops)
+            drawRect(pixmapToPredict, rectangles)
+        
+            pm = set_image(self, pixmapToPredict, mode='Pixmap')
+            switch_background(self, pm)
             
-            pic, pm = set_image(self, global_pixmap_list[-1], mode='Pixmap')
-            switch_background(self, pic)
+        print regprops
             
-            print regprops
-        else:
-            print 'NO prediction'
         
-        
-        
+    def wheelEvent(self, event):
+        delta = event.angleDelta().y()
+        self.wheelValue += (delta and delta // abs(delta))
+        print(self.wheelValue)
+
 if __name__ == '__main__':
     
     app = QApplication(sys.argv)
