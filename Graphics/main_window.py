@@ -4,7 +4,7 @@ sys.path.append('../Utils')
 from PyQt5.QtWidgets import QWidget, QToolTip, QPushButton, QApplication, QFileDialog, QFormLayout, QHBoxLayout, QGroupBox, QVBoxLayout, QScrollBar
 from PyQt5.QtGui import QFont
 from predict_image_DIGITS import predict_one
-from imageUtils import switch_background, drawRect, set_image
+from imageUtils import switch_background, drawRect, set_image, load_images_from_dir, scroll_image
 import settings
 
 
@@ -47,7 +47,7 @@ class MainWindow(QWidget):
         
         hbox.addWidget(groupBox1, 1)
         
-        vbox2 = QVBoxLayout()
+        vbox2 = QHBoxLayout()
         groupBox2 = QGroupBox("Image", self)
            
         vbox3 = QHBoxLayout(groupBox2)        
@@ -61,8 +61,10 @@ class MainWindow(QWidget):
         switch_background(self, pixmap, mode='Start')
         
         self.s1 = QScrollBar()
-        self.s1.setMaximum(255)
-        vbox3.addWidget(self.s1, 1)        
+        self.setSliderMax(1)
+# FUTURE RELEASE
+#        self.s1.sliderMoved.connect(self.s1.setValue)
+        vbox2.addWidget(self.s1, 1)        
         
         self.setLayout(hbox)
         self.show()
@@ -72,14 +74,20 @@ class MainWindow(QWidget):
         global global_image_path_list
         global_image_path_list = []
         
-        options = QFileDialog.Options()
-        options |= QFileDialog.DontUseNativeDialog
-        fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;Python Files (*.py)", options=options)
-
-        pixmap = set_image(self, fileName, mode='Single')
-        switch_background(self, pixmap)
+        #options = QFileDialog.Options()
+        #options |= QFileDialog.DontUseNativeDialog
+        #fileName, _ = QFileDialog.getOpenFileName(self,"QFileDialog.getOpenFileName()", "","All Files (*);;Python Files (*.py)", options=options)
+        imgdir = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
+        global_image_path_list = load_images_from_dir(self, imgdir, global_image_path_list)
         
-        global_image_path_list.append(fileName)
+        self.setSliderMax(len(global_image_path_list))
+
+        print self.s1.maximum()
+
+        #pixmap = set_image(self, fileName, mode='Single')
+        #switch_background(self, pixmap)
+        
+        #global_image_path_list.append(fileName)
         
     def predictbutton(self):       
         
@@ -96,8 +104,24 @@ class MainWindow(QWidget):
         
     def wheelEvent(self, event):
         delta = event.angleDelta().y()
-        self.wheelValue += (delta and delta // abs(delta))
+        if ((self.wheelValue - (delta and delta // abs(delta))) >= 0) and ((self.wheelValue - (delta and delta // abs(delta))) <= self.s1.maximum()):
+            self.wheelValue -= (delta and delta // abs(delta))
         print(self.wheelValue)
+        self.s1.setValue(self.wheelValue)
+        
+        global global_image_path_list
+        if (type(global_image_path_list) is list) and len(global_image_path_list) > 0:
+            global_image_path_list = scroll_image(self, global_image_path_list)
+# FUTURE RELEASE
+# =============================================================================
+#         self.setSliderValue(self.wheelValue)
+# 
+#     def setSliderValue(self, value):
+#         self.s1.setValue(value)
+# =============================================================================
+
+    def setSliderMax(self, maxValue):
+        self.s1.setMaximum(maxValue-1)
 
 if __name__ == '__main__':
     

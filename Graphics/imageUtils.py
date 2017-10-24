@@ -1,4 +1,4 @@
-import sys
+import sys, os
 sys.path.append('../Utils')
 import settings
 from PyQt5.QtCore import QRect, QPoint, Qt
@@ -34,15 +34,34 @@ def drawRect(pixmap, rectangles):
         qp.end()
 
 
-def set_image(self, imgpath, mode='Single', image=0):                
+def set_image(self, imgpath, mode='Single'):                
         
         if mode is 'Single':
             pixmap = QPixmap(imgpath)
         elif mode is 'List':
-            pixmap = QPixmap(imgpath[-1])
+            pixmap = QPixmap(imgpath[0])
         elif mode is 'Pixmap':
             pixmap = imgpath
             
         pixmap_resized = pixmap.scaled(settings.gWidth, settings.gHeight, Qt.KeepAspectRatio)
         
         return pixmap_resized
+
+def load_images_from_dir(self, dirpath, global_image_path_list):
+    
+    for filepath in os.listdir(dirpath):
+        if filepath.endswith(".jpeg") or filepath.endswith(".jpg"): # TODO parameter
+            global_image_path_list.append(os.path.join(dirpath, filepath))
+    
+    pixmap = set_image(self, global_image_path_list[0], mode='Single')
+    switch_background(self, pixmap)        
+    
+    return global_image_path_list
+            
+def scroll_image(self, global_image_path_list):
+        
+    fileName = global_image_path_list[self.wheelValue]
+    pixmap = set_image(self, fileName, mode='Single')
+    switch_background(self, pixmap)
+    
+    return global_image_path_list
