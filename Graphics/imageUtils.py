@@ -50,7 +50,7 @@ def set_image(self, imgpath, mode='Single'):
 def load_images_from_dir(self, dirpath, global_image_path_list):
     
     for filepath in os.listdir(dirpath):
-        if filepath.endswith(".jpeg") or filepath.endswith(".jpg"): # TODO parameter
+        if filepath.endswith(".tif") or filepath.endswith(".jpg"): # TODO parameter
             global_image_path_list.append(os.path.join(dirpath, filepath))
     
     pixmap = set_image(self, global_image_path_list[0], mode='Single')
