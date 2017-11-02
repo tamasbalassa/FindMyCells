@@ -7,6 +7,7 @@ import PyQt5.QtCore as qc
 from PyQt5.QtCore import Qt
 import PyQt5.QtWidgets as wdg
 from PyQt5.QtGui import QFont
+import PyQt5.QtGui as qg
 from predict_image_DIGITS import predict_one, predict_all
 from imageUtils import switch_background, drawRect, set_image, load_images_from_dir, scroll_image
 import settings
@@ -17,8 +18,7 @@ class MainWindow(wdg.QWidget):
     def __init__(self):
         super(MainWindow, self).__init__()
                
-        global global_image_path_list
-        global_image_path_list = []
+        self.global_image_path_list = []
         
         self.wheelValue = 0
         
@@ -40,7 +40,6 @@ class MainWindow(wdg.QWidget):
         # menu group starts here
         groupBox1 = wdg.QGroupBox("Menu", self)
         vbox = wdg.QVBoxLayout(groupBox1)
-        flay1 = wdg.QFormLayout()
         
         vbox.addSpacing(30)
         
@@ -48,28 +47,30 @@ class MainWindow(wdg.QWidget):
         groupBox1_a = wdg.QGroupBox("L&P", self)
         vbox.addWidget(groupBox1_a)
         vbox1_a = wdg.QVBoxLayout(groupBox1_a)
+        vbox1_a.setSpacing(0)
         
         # load button
         load_btn = wdg.QPushButton('Load', self)
         load_btn.clicked.connect(self.loadbutton)
-        flay1.addRow(load_btn)
         vbox1_a.addWidget(load_btn, 1, Qt.AlignTop)
         
         # predict button
         predict_btn = wdg.QPushButton('Predict', self)
         predict_btn.clicked.connect(self.predictbutton)
-        flay1.addRow(predict_btn)
         vbox1_a.addWidget(predict_btn, 1, Qt.AlignTop)
-
-        vbox1_a.addLayout(flay1, 1)
+        
+        #spacer
+        verticalSpacer = wdg.QSpacerItem(40, 60, wdg.QSizePolicy.Minimum, wdg.QSizePolicy.Expanding)
+        vbox1_a.addItem(verticalSpacer)        
          
         vbox.addSpacing(100)
         
         # UTILS SECTION
-        flay_utils = wdg.QFormLayout()
         groupBox1_utils = wdg.QGroupBox("UTILS", self)
         vbox.addWidget(groupBox1_utils)
         vbox1_utils = wdg.QVBoxLayout(groupBox1_utils)
+        vbox1_utils.setContentsMargins(10, 5, 10, 5)
+        vbox1_utils.setSpacing(0)
         
         # switch model button
         #switch_model_btn = wdg.QPushButton('Switch model', self)
@@ -80,32 +81,49 @@ class MainWindow(wdg.QWidget):
         # switch model text
         switch_model_text = wdg.QLabel()
         switch_model_text.setText("Select Model:")
-        flay_utils.addRow(switch_model_text)
         vbox1_utils.addWidget(switch_model_text, 1)
         
         # switch model combobutton
         combo_model = wdg.QComboBox(self)
-        flay_utils.addRow(combo_model)
         vbox1_utils.addWidget(combo_model, 1)
-        
-        vbox1_utils.addSpacing(20)
+        vbox1_utils.addSpacing(10)
         
         # select image type text
         select_img_type = wdg.QLabel()
         select_img_type.setText("Image Type:")
-        flay_utils.addRow(select_img_type)
-        vbox1_utils.addWidget(select_img_type, 1)       
-        
+        vbox1_utils.addWidget(select_img_type, 1)   
         
         # select image type combobutton
-        combo_imgtype = wdg.QComboBox(self)
-        flay_utils.addRow(combo_imgtype)
-        vbox1_utils.addWidget(combo_imgtype, 1)
+        self.combo_imgtype = wdg.QComboBox(self)
+        self.combo_imgtype.addItems(["jpg", "jpeg", "tif"])
+        vbox1_utils.addWidget(self.combo_imgtype, 1)
+        vbox1_utils.addSpacing(10)
         
-        vbox1_utils.addLayout(flay_utils, 1)
-        vbox1_utils.insertSpacing(0, 20)
-        vbox1_utils.insertSpacing(5, 2)
+        # select cvg_threshold text
+        select_img_type = wdg.QLabel()
+        select_img_type.setText("Cvg_threshold:")
+        vbox1_utils.addWidget(select_img_type, 1)   
         
+        # select cvg_threshold combobutton
+        self.cvg_threshold = wdg.QLineEdit(self)
+        self.cvg_threshold.setText('0.6')
+        vbox1_utils.addWidget(self.cvg_threshold, 1)
+        vbox1_utils.addSpacing(10)
+        
+        # select rect_threshold text
+        select_img_type = wdg.QLabel()
+        select_img_type.setText("Rect_threshold:")
+        vbox1_utils.addWidget(select_img_type, 1)   
+        
+        # select rect_threshold combobutton
+        self.rect_threshold = wdg.QLineEdit(self)
+        self.rect_threshold.setText('3')
+        vbox1_utils.addWidget(self.rect_threshold, 1)
+        
+        #spacer
+        verticalSpacer = wdg.QSpacerItem(40, 60, wdg.QSizePolicy.Minimum, wdg.QSizePolicy.Expanding)
+        vbox1_utils.addItem(verticalSpacer)
+                
         vbox.addSpacing(100)
         
         # OUTPUT GROUP        
@@ -120,6 +138,10 @@ class MainWindow(wdg.QWidget):
         stat_btn.clicked.connect(self.statisticsbutton)
         flay_output.addRow(stat_btn)
         vbox1_output.addWidget(stat_btn, 1)
+        
+        #spacer
+        verticalSpacer = wdg.QSpacerItem(40, 40, wdg.QSizePolicy.Minimum, wdg.QSizePolicy.Expanding)
+        vbox1_output.addItem(verticalSpacer)
         
         vbox.addSpacing(150)
         
@@ -158,28 +180,28 @@ class MainWindow(wdg.QWidget):
         
     def loadbutton(self):
         
-        global global_image_path_list, imgdir
-        global_image_path_list = []
+        global imgdir
+        self.global_image_path_list = []
 
         imgdir = str(wdg.QFileDialog.getExistingDirectory(self, "Select Directory"))
-        global_image_path_list = load_images_from_dir(self, imgdir, global_image_path_list)
+        load_images_from_dir(self, imgdir)
         
-        self.setSliderMax(len(global_image_path_list))
+        self.setSliderMax(len(self.global_image_path_list))
         
     def predictbutton(self):       
         
         pixmapToPredict = self.vbox.itemAt(0).widget().pixmap()
-        if (type(global_image_path_list) is list):
-            rectangles = predict_one([global_image_path_list[self.wheelValue]], 1) # TODO parameter
+        if (type(self.global_image_path_list) is list):
+            rectangles = predict_one(self, [self.global_image_path_list[self.wheelValue]], True) # TODO parameter
             drawRect(pixmapToPredict, rectangles)
         
             pm = set_image(self, pixmapToPredict, mode='Pixmap')
             switch_background(self, pm)
        
     def statisticsbutton(self):
-        global global_image_path_list, imgdir
+        global imgdir
         
-        rectangles = predict_all(global_image_path_list, 1)
+        rectangles = predict_all(self.global_image_path_list, True)
         
         with open('eggs.csv', 'wb') as csvfile:
             fieldnames = ['Image Number', 'Cell ID', 'x1', 'y1', 'x2', 'y2']
@@ -194,7 +216,7 @@ class MainWindow(wdg.QWidget):
                     cellID = 0
                 else:
                     cellID += 1
-                imgName = global_image_path_list[row[-1]].split(os.sep)
+                imgName = self.global_image_path_list[row[-1]].split(os.sep)
                 
                 writer.writerow({'Image Number': imgName[-1], 'Cell ID': cellID, 'x1': int(row[0]), 'y1': int(row[1]), 'x2': int(row[2]), 'y2': int(row[3])})
                    
@@ -209,9 +231,8 @@ class MainWindow(wdg.QWidget):
         self.scrollbar.setValue(self.wheelValue)
         print(self.wheelValue)
         
-        global global_image_path_list
-        if (type(global_image_path_list) is list) and len(global_image_path_list) > 0:
-            global_image_path_list = scroll_image(self, global_image_path_list)
+        if (type(self.global_image_path_list) is list) and len(self.global_image_path_list) > 0:
+            self.global_image_path_list = scroll_image(self, self.global_image_path_list)
 # FUTURE RELEASE
 # =============================================================================
 #         self.setSliderValue(self.wheelValue)

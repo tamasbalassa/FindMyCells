@@ -3,7 +3,7 @@ sys.path.append('../Utils')
 import settings
 from PyQt5.QtCore import QRect, QPoint, Qt
 from PyQt5.QtGui import QPainter, QBrush, QColor, QPixmap
-from PyQt5.QtWidgets import QLabel
+from PyQt5.QtWidgets import QLabel, QMessageBox
 
 
 def switch_background(self, pixmap, mode='None'):
@@ -47,16 +47,19 @@ def set_image(self, imgpath, mode='Single'):
         
         return pixmap_resized
 
-def load_images_from_dir(self, dirpath, global_image_path_list):
+def load_images_from_dir(self, dirpath):
     
+    c = 0
     for filepath in os.listdir(dirpath):
-        if filepath.endswith(".tif") or filepath.endswith(".jpg"): # TODO parameter
-            global_image_path_list.append(os.path.join(dirpath, filepath))
+        if filepath.endswith(self.combo_imgtype.currentText()):
+            self.global_image_path_list.append(os.path.join(dirpath, filepath))
+            c += 1
     
-    pixmap = set_image(self, global_image_path_list[0], mode='Single')
-    switch_background(self, pixmap)        
-    
-    return global_image_path_list
+    if c < 1:
+           QMessageBox.about(self, "ERROR", "Please select the correct image type.")
+    else:
+        pixmap = set_image(self, self.global_image_path_list[0], mode='Single')
+        switch_background(self, pixmap)
             
 def scroll_image(self, global_image_path_list):
         
