@@ -8,11 +8,10 @@ import time
 from google.protobuf import text_format
 import PIL.Image
 import scipy.misc
-from skimage.measure import label, regionprops
-from scipy.misc import imresize
 import settings
+import google.protobuf.text_format as txtf
 
-def predict_one(img,gpu):
+def predict_one(self,img, gpu):
 
     caffe.set_device(0)
     if gpu:
@@ -23,16 +22,30 @@ def predict_one(img,gpu):
     
     caffemodel = '../AI/snapshot_iter_335100.caffemodel'
     deploy_file = '../AI/deploy_ilida.prototxt'
-    net = caffe.Net(deploy_file, caffemodel, caffe.TEST)
-    #net = get_net(caffemodel, deploy_file, gpu)
+# =============================================================================
+#     caffemodel = '../AI/snapshot_iter_53928.caffemodel'
+#     deploy_file = '../AI/deploy_krisztian.prototxt'
+# =============================================================================
+    #net = caffe.Net(deploy_file, caffemodel, caffe.TEST)
+    net = get_net(self, caffemodel, deploy_file, gpu)
     
     #img = ['tissue002a.jpg','tissue3.jpg', '20.jpg', '199.jpg']
     #img = ['tissue002a.jpg']
     
-    bounding_boxes, regprops = classify(net, deploy_file, img)
+    bounding_boxes = classify(net, deploy_file, img)
     
-    return bounding_boxes, regprops
+    return bounding_boxes
 
+def predict_all(imglist, gpu):
+            
+    caffemodel = '../AI/snapshot_iter_335100.caffemodel'
+    deploy_file = '../AI/deploy_ilida.prototxt'
+    net = caffe.Net(deploy_file, caffemodel, caffe.TEST)
+    net = get_net(caffemodel, deploy_file, gpu)
+    
+    bounding_boxes = classify(net, deploy_file, imglist)
+    
+    return bounding_boxes
 
 def forward_pass(images, net, transformer, batch_size=None):
     """
@@ -60,7 +73,6 @@ def forward_pass(images, net, transformer, batch_size=None):
     dims = transformer.inputs['data'][1:]
 
     scores = None
-    regprops = []
     for chunk in [caffe_images[x:x+batch_size] for x in xrange(0, len(caffe_images), batch_size)]:
         new_shape = (len(chunk),) + tuple(dims)
         if net.blobs['data'].data.shape != new_shape:
@@ -69,8 +81,8 @@ def forward_pass(images, net, transformer, batch_size=None):
             image_data = transformer.preprocess('data', image)
             net.blobs['data'].data[index] = image_data
         start = time.time()
-        output = net.forward()[net.outputs[0]]
         
+        output = net.forward()[net.outputs[0]]
         
 # =============================================================================
 #         y = net.blobs['coverage'].data[0,0]
@@ -96,7 +108,7 @@ def forward_pass(images, net, transformer, batch_size=None):
             scores = np.vstack((scores, output))
         print 'Processed %s/%s images in %f seconds ...' % (len(scores), len(caffe_images), (end - start))
 
-    return scores, regprops
+    return scores
 
 def get_transformer(deploy_file):
     """
@@ -126,7 +138,7 @@ def get_transformer(deploy_file):
     if dims[1] == 3:
         # channel swap
         t.set_channel_swap('data', (2,1,0))
-
+    
     return t
 
 def classify(net, deploy_file, image_files,
@@ -161,10 +173,13 @@ def classify(net, deploy_file, image_files,
     #images = load_image(image_files, height, width,mode)
     #labels = read_labels(labels_file)
     
+    print image_files
+    
     settings.gInputWidth = width
     settings.gInputHeight = height
     # Classify the image
-    scores, regprops = forward_pass(images, net, transformer, batch_size=batch_size)
+    
+    scores = forward_pass(images, net, transformer, batch_size=batch_size)
 
     ### Process the results
     rects = []
@@ -183,11 +198,15 @@ def classify(net, deploy_file, image_files,
                 int(round(bottom)),
                 confidence,
             )
-           
-            rects.append([left, top, right, bottom])
+            if left<0:left=0
+            if top<0:top=0
+            if right<0:right=0
+            if bottom<0:bottom=0
+            
+            rects.append([left, top, right, bottom, i])
             #rects.append([lt[0], lt[1], rb[0], rb[1]])
                  
-    return rects, regprops
+    return rects
 
 
 def load_image(path, height, width, mode='RGB'):
@@ -212,7 +231,7 @@ def load_image(path, height, width, mode='RGB'):
     image = scipy.misc.imresize(image, (height, width), 'bilinear')
     return image
 
-def get_net(caffemodel, deploy_file, use_gpu=True):
+def get_net(self, caffemodel, deploy_file, use_gpu=True):
     """
     Returns an instance of caffe.Net
 
@@ -227,4 +246,35 @@ def get_net(caffemodel, deploy_file, use_gpu=True):
         caffe.set_mode_gpu()
 
     # load a new model
-    return caffe.Net(deploy_file, caffemodel, caffe.TEST)
+    net = caffe.Net(deploy_file, caffemodel, caffe.TEST)
+        
+    nnet = caffe_pb2.NetParameter()
+
+    with open(deploy_file) as f:
+        s = f.read()
+        txtf.Merge(s, nnet)
+        
+    layerNames = [l.name for l in nnet.layer]
+    idx = layerNames.index('cluster')
+    l = nnet.layer[idx]
+    
+    params = l.python_param.param_str
+    params = params.split(',')
+    params[3] = float(self.cvg_threshold.text())
+    params[4] = int(self.rect_threshold.text())
+    updated_param_str = ','.join(str(e) for e in params)
+    print updated_param_str
+    l.python_param.param_str = updated_param_str
+    
+    print 'writing', deploy_file
+    with open(deploy_file, 'w') as f:
+        f.write(str(nnet))
+
+# =============================================================================
+#     3. gridbox_cvg_threshold
+#     4. gridbox_rect_threshold
+#     5. gridbox_rect_eps
+#     6. min_height
+# =============================================================================
+    
+    return net
