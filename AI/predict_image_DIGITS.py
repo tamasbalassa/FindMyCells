@@ -9,9 +9,8 @@ from google.protobuf import text_format
 import PIL.Image
 import scipy.misc
 import settings
-import google.protobuf.text_format as txtf
 
-def predict_one(self,img, gpu):
+def predict_one(self, img, gpu):
 
     caffe.set_device(0)
     if gpu:
@@ -20,28 +19,24 @@ def predict_one(self,img, gpu):
         caffe.set_mode_cpu()    
     
     
-    caffemodel = '../AI/snapshot_iter_335100.caffemodel'
-    deploy_file = '../AI/deploy_ilida.prototxt'
-# =============================================================================
-#     caffemodel = '../AI/snapshot_iter_53928.caffemodel'
-#     deploy_file = '../AI/deploy_krisztian.prototxt'
-# =============================================================================
-    #net = caffe.Net(deploy_file, caffemodel, caffe.TEST)
+    #caffemodel = '../AI/models/snapshot_iter_335100.caffemodel'
+    #deploy_file = '../AI/models/deploy_ilida.prototxt'
+    caffemodel = str(self.model)
+    deploy_file = str(self.architecture)
+    
     net = get_net(self, caffemodel, deploy_file, gpu)
-    
-    #img = ['tissue002a.jpg','tissue3.jpg', '20.jpg', '199.jpg']
-    #img = ['tissue002a.jpg']
-    
+       
     bounding_boxes = classify(net, deploy_file, img)
     
     return bounding_boxes
 
-def predict_all(imglist, gpu):
+def predict_all(self, imglist, gpu):
             
-    caffemodel = '../AI/snapshot_iter_335100.caffemodel'
-    deploy_file = '../AI/deploy_ilida.prototxt'
-    net = caffe.Net(deploy_file, caffemodel, caffe.TEST)
-    net = get_net(caffemodel, deploy_file, gpu)
+    #caffemodel = '../AI/models/snapshot_iter_335100.caffemodel'
+    #deploy_file = '../AI/models/deploy_ilida.prototxt'
+    caffemodel = str(self.model)
+    deploy_file = str(self.architecture)
+    net = get_net(self, caffemodel, deploy_file, gpu)
     
     bounding_boxes = classify(net, deploy_file, imglist)
     
@@ -247,34 +242,5 @@ def get_net(self, caffemodel, deploy_file, use_gpu=True):
 
     # load a new model
     net = caffe.Net(deploy_file, caffemodel, caffe.TEST)
-        
-    nnet = caffe_pb2.NetParameter()
-
-    with open(deploy_file) as f:
-        s = f.read()
-        txtf.Merge(s, nnet)
-        
-    layerNames = [l.name for l in nnet.layer]
-    idx = layerNames.index('cluster')
-    l = nnet.layer[idx]
-    
-    params = l.python_param.param_str
-    params = params.split(',')
-    params[3] = float(self.cvg_threshold.text())
-    params[4] = int(self.rect_threshold.text())
-    updated_param_str = ','.join(str(e) for e in params)
-    print updated_param_str
-    l.python_param.param_str = updated_param_str
-    
-    print 'writing', deploy_file
-    with open(deploy_file, 'w') as f:
-        f.write(str(nnet))
-
-# =============================================================================
-#     3. gridbox_cvg_threshold
-#     4. gridbox_rect_threshold
-#     5. gridbox_rect_eps
-#     6. min_height
-# =============================================================================
-    
+           
     return net
