@@ -10,6 +10,7 @@ from PyQt5.QtGui import QFont
 import PyQt5.QtGui as qg
 from predict_image_DIGITS import predict_one, predict_all
 from imageUtils import switch_background, drawRect, set_image, load_images_from_dir, scroll_image
+from aiUtils import change_params_in_deploy
 import settings
 
 
@@ -53,6 +54,18 @@ class MainWindow(wdg.QWidget):
         load_btn = wdg.QPushButton('Load', self)
         load_btn.clicked.connect(self.loadbutton)
         vbox1_a.addWidget(load_btn, 1, Qt.AlignTop)
+        vbox1_a.addSpacing(5)
+        
+        # select image type text
+        select_img_type = wdg.QLabel()
+        select_img_type.setText("Image Type:")
+        vbox1_a.addWidget(select_img_type, 1)
+        
+        # select image type combobutton
+        self.combo_imgtype = wdg.QComboBox(self)
+        self.combo_imgtype.addItems(["jpg", "jpeg", "tif"])
+        vbox1_a.addWidget(self.combo_imgtype, 1)
+        vbox1_a.addSpacing(40)
         
         # predict button
         predict_btn = wdg.QPushButton('Predict', self)
@@ -60,10 +73,10 @@ class MainWindow(wdg.QWidget):
         vbox1_a.addWidget(predict_btn, 1, Qt.AlignTop)
         
         #spacer
-        verticalSpacer = wdg.QSpacerItem(40, 60, wdg.QSizePolicy.Minimum, wdg.QSizePolicy.Expanding)
-        vbox1_a.addItem(verticalSpacer)        
+        #verticalSpacer = wdg.QSpacerItem(40, 60, wdg.QSizePolicy.Minimum, wdg.QSizePolicy.Expanding)
+        #vbox1_a.addItem(verticalSpacer)        
          
-        vbox.addSpacing(100)
+        vbox.addSpacing(50)
         
         # UTILS SECTION
         groupBox1_utils = wdg.QGroupBox("UTILS", self)
@@ -72,59 +85,68 @@ class MainWindow(wdg.QWidget):
         vbox1_utils.setContentsMargins(10, 5, 10, 5)
         vbox1_utils.setSpacing(0)
         
-        # switch model button
-        #switch_model_btn = wdg.QPushButton('Switch model', self)
-        #switch_model_btn.clicked.connect(self.switchmodelbutton)
-        #flay_utils.addRow(switch_model_btn)
-        #vbox1_utils.addWidget(switch_model_btn, 1)
-        
         # switch model text
         switch_model_text = wdg.QLabel()
         switch_model_text.setText("Select Model:")
         vbox1_utils.addWidget(switch_model_text, 1)
         
         # switch model combobutton
-        combo_model = wdg.QComboBox(self)
-        vbox1_utils.addWidget(combo_model, 1)
+        self.combo_model = wdg.QComboBox(self)
+        vbox1_utils.addWidget(self.combo_model, 1)
+        self.model_combo_contents()
+        self.model = '../AI/models/' + self.combo_model.currentText() + '.caffemodel'
+        vbox1_utils.addSpacing(6)
+                
+        # switch arch text
+        switch_arch_text = wdg.QLabel()
+        switch_arch_text.setText("Select Architecture:")
+        vbox1_utils.addWidget(switch_arch_text, 1)
+        
+        # switch arch combobutton
+        self.combo_arch = wdg.QComboBox(self)
+        vbox1_utils.addWidget(self.combo_arch, 1)
+        self.arch_combo_contents()
+        self.architecture = '../AI/models/' + self.combo_arch.currentText() + '.prototxt'
         vbox1_utils.addSpacing(10)
         
-        # select image type text
-        select_img_type = wdg.QLabel()
-        select_img_type.setText("Image Type:")
-        vbox1_utils.addWidget(select_img_type, 1)   
-        
-        # select image type combobutton
-        self.combo_imgtype = wdg.QComboBox(self)
-        self.combo_imgtype.addItems(["jpg", "jpeg", "tif"])
-        vbox1_utils.addWidget(self.combo_imgtype, 1)
-        vbox1_utils.addSpacing(10)
-        
+        # set model button
+        model_btn = wdg.QPushButton('Set Model', self)
+        model_btn.clicked.connect(self.switchmodelbutton)
+        vbox1_utils.addWidget(model_btn, 1)
+        vbox1_utils.addSpacing(40)
+                
         # select cvg_threshold text
         select_img_type = wdg.QLabel()
         select_img_type.setText("Cvg_threshold:")
         vbox1_utils.addWidget(select_img_type, 1)   
         
-        # select cvg_threshold combobutton
+        # select cvg_threshold textfield
         self.cvg_threshold = wdg.QLineEdit(self)
         self.cvg_threshold.setText('0.6')
         vbox1_utils.addWidget(self.cvg_threshold, 1)
-        vbox1_utils.addSpacing(10)
+        vbox1_utils.addSpacing(5)
         
         # select rect_threshold text
         select_img_type = wdg.QLabel()
         select_img_type.setText("Rect_threshold:")
         vbox1_utils.addWidget(select_img_type, 1)   
         
-        # select rect_threshold combobutton
+        # select rect_threshold textfield
         self.rect_threshold = wdg.QLineEdit(self)
         self.rect_threshold.setText('3')
         vbox1_utils.addWidget(self.rect_threshold, 1)
+        vbox1_utils.addSpacing(10)
+        
+        # set treshold button
+        tresh_btn = wdg.QPushButton('Set threshold', self)
+        tresh_btn.clicked.connect(self.settresholdbutton)
+        vbox1_utils.addWidget(tresh_btn, 1)
         
         #spacer
-        verticalSpacer = wdg.QSpacerItem(40, 60, wdg.QSizePolicy.Minimum, wdg.QSizePolicy.Expanding)
-        vbox1_utils.addItem(verticalSpacer)
+        #verticalSpacer = wdg.QSpacerItem(40, 60, wdg.QSizePolicy.Minimum, wdg.QSizePolicy.Expanding)
+        #vbox1_utils.addItem(verticalSpacer)
                 
-        vbox.addSpacing(100)
+        vbox.addSpacing(50)
         
         # OUTPUT GROUP        
         flay_output = wdg.QFormLayout()
@@ -140,10 +162,10 @@ class MainWindow(wdg.QWidget):
         vbox1_output.addWidget(stat_btn, 1)
         
         #spacer
-        verticalSpacer = wdg.QSpacerItem(40, 40, wdg.QSizePolicy.Minimum, wdg.QSizePolicy.Expanding)
-        vbox1_output.addItem(verticalSpacer)
+        #verticalSpacer = wdg.QSpacerItem(40, 40, wdg.QSizePolicy.Minimum, wdg.QSizePolicy.Expanding)
+        #vbox1_output.addItem(verticalSpacer)
         
-        vbox.addSpacing(150)
+        vbox.addSpacing(180)
         
         #vbox.addLayout(flay, 1)        
         hbox.addWidget(groupBox1, 1)
@@ -190,10 +212,13 @@ class MainWindow(wdg.QWidget):
         
     def predictbutton(self):       
         
-        pixmapToPredict = self.vbox.itemAt(0).widget().pixmap()
+        pm = set_image(self, self.global_image_path_list[self.wheelValue], mode='Single')
+        switch_background(self, pm)
+        
+        pixmapToPredict = self.vbox.itemAt(0).widget().pixmap()        
         if (type(self.global_image_path_list) is list):
             rectangles = predict_one(self, [self.global_image_path_list[self.wheelValue]], True) # TODO parameter
-            drawRect(pixmapToPredict, rectangles)
+            drawRect(self, pixmapToPredict, rectangles)
         
             pm = set_image(self, pixmapToPredict, mode='Pixmap')
             switch_background(self, pm)
@@ -201,7 +226,7 @@ class MainWindow(wdg.QWidget):
     def statisticsbutton(self):
         global imgdir
         
-        rectangles = predict_all(self.global_image_path_list, True)
+        rectangles = predict_all(self, self.global_image_path_list, True)
         
         with open('eggs.csv', 'wb') as csvfile:
             fieldnames = ['Image Number', 'Cell ID', 'x1', 'y1', 'x2', 'y2']
@@ -219,10 +244,27 @@ class MainWindow(wdg.QWidget):
                 imgName = self.global_image_path_list[row[-1]].split(os.sep)
                 
                 writer.writerow({'Image Number': imgName[-1], 'Cell ID': cellID, 'x1': int(row[0]), 'y1': int(row[1]), 'x2': int(row[2]), 'y2': int(row[3])})
-                   
+        
+    def settresholdbutton(self):
+        change_params_in_deploy(self)              
         
     def switchmodelbutton(self):
-        print 'model'
+        self.model = '../AI/models/' + self.combo_model.currentText() + '.caffemodel'
+        self.architecture = '../AI/models/' + self.combo_arch.currentText() + '.prototxt'
+      
+    def model_combo_contents(self):
+        dirpath = '../AI/models/'
+        for filepath in os.listdir(dirpath):
+            if filepath.endswith('.caffemodel'):
+                fp = filepath.split('.')
+                self.combo_model.addItem(fp[-2])
+                
+    def arch_combo_contents(self):
+        dirpath = '../AI/models/'
+        for filepath in os.listdir(dirpath):
+            if filepath.endswith('.prototxt'):
+                fp = filepath.split('.')
+                self.combo_arch.addItem(fp[-2])
         
     def wheelEvent(self, event):
         delta = event.angleDelta().y()
