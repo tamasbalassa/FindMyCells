@@ -2138,27 +2138,24 @@ layer {
     }
   }
 }
-
-
 layer {
   name: "coverage/sig"
   type: "Sigmoid"
   bottom: "cvg/classifier"
   top: "coverage"
 }
-
 layer {
   name: "bbox/regressor"
   type: "Convolution"
   bottom: "pool5/drop_s1"
   top: "bboxes"
   param {
-    lr_mult: 1
-    decay_mult: 1
+    lr_mult: 1.0
+    decay_mult: 1.0
   }
   param {
-    lr_mult: 2
-    decay_mult: 0
+    lr_mult: 2.0
+    decay_mult: 0.0
   }
   convolution_param {
     num_output: 4
@@ -2169,35 +2166,37 @@ layer {
     }
     bias_filler {
       type: "constant"
-      value: 0.
+      value: 0.0
     }
   }
 }
-
-# Cluster bboxes
 layer {
-    type: 'Python'
-    name: 'cluster'
-    bottom: 'coverage'
-    bottom: 'bboxes'
-    top: 'bbox-list'
-    python_param {
-        module: 'caffe.layers.detectnet.clustering'
-        layer: 'ClusterDetections'
-        param_str : '704, 512, 16, 0.015, 1, 0.02, 5, 1'
-    }
-    include: { phase: TEST }
+  name: "cluster"
+  type: "Python"
+  bottom: "coverage"
+  bottom: "bboxes"
+  top: "bbox-list"
+  include {
+    phase: TEST
+  }
+  python_param {
+    module: "caffe.layers.detectnet.clustering"
+    layer: "ClusterDetections"
+    param_str: "704, 512, 16,0.01,3, 0.02, 5, 1"
+  }
 }
-
 layer {
-    type: 'Python'
-    name: 'score'
-    bottom: 'bbox-list-label'
-    bottom: 'bbox-list'
-    top: 'bbox-list-scored'
-    python_param {
-        module: 'caffe.layers.detectnet.mean_ap'
-        layer: 'ScoreDetections'
-    }
-    include: { phase: TEST stage: "val" }
+  name: "score"
+  type: "Python"
+  bottom: "bbox-list-label"
+  bottom: "bbox-list"
+  top: "bbox-list-scored"
+  include {
+    phase: TEST
+    stage: "val"
+  }
+  python_param {
+    module: "caffe.layers.detectnet.mean_ap"
+    layer: "ScoreDetections"
+  }
 }
