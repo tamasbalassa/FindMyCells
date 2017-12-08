@@ -1,3 +1,6 @@
+# this is a modified version of the file that was originally implemented by: lukeyeager
+# source: https://gist.github.com/lukeyeager/777087991419d98700054cade2f755e6
+
 import sys
 sys.path.append('../Utils')
 import numpy as np
@@ -9,40 +12,32 @@ from google.protobuf import text_format
 import PIL.Image
 import scipy.misc
 import settings
+import PyQt5.QtWidgets as wdg
 
 def predict_one(self, img, gpu):
 
-    caffe.set_device(0)
-    if gpu:
-        caffe.set_mode_gpu()
-    else:
-        caffe.set_mode_cpu()    
-    
-    
-    #caffemodel = '../AI/models/snapshot_iter_335100.caffemodel'
-    #deploy_file = '../AI/models/deploy_ilida.prototxt'
+    #caffe.set_device(0)   
+
     caffemodel = str(self.model)
     deploy_file = str(self.architecture)
     
     net = get_net(self, caffemodel, deploy_file, gpu)
-       
-    bounding_boxes = classify(net, deploy_file, img)
+    
+    bounding_boxes = classify(self, net, deploy_file, img)
     
     return bounding_boxes
 
 def predict_all(self, imglist, gpu):
-            
-    #caffemodel = '../AI/models/snapshot_iter_335100.caffemodel'
-    #deploy_file = '../AI/models/deploy_ilida.prototxt'
+    
     caffemodel = str(self.model)
     deploy_file = str(self.architecture)
     net = get_net(self, caffemodel, deploy_file, gpu)
     
-    bounding_boxes = classify(net, deploy_file, imglist)
+    bounding_boxes = classify(self, net, deploy_file, imglist)
     
     return bounding_boxes
 
-def forward_pass(images, net, transformer, batch_size=None):
+def forward_pass(self, images, net, transformer, batch_size=None):
     """
     Returns scores for each image as an np.ndarray (nImages x nClasses)
 
@@ -64,9 +59,9 @@ def forward_pass(images, net, transformer, batch_size=None):
             caffe_images.append(image[:,:,np.newaxis])
         else:
             caffe_images.append(image)
-
+            
     dims = transformer.inputs['data'][1:]
-
+    
     scores = None
     for chunk in [caffe_images[x:x+batch_size] for x in xrange(0, len(caffe_images), batch_size)]:
         new_shape = (len(chunk),) + tuple(dims)
@@ -78,29 +73,15 @@ def forward_pass(images, net, transformer, batch_size=None):
         start = time.time()
         
         output = net.forward()[net.outputs[0]]
-        
-# =============================================================================
-#         y = net.blobs['coverage'].data[0,0]
-#         y = imresize(y, [850, 1200], mode='F')
-#         low_values_flags = y < 0.001
-#         high_values_flags = y >= 0.001
-#         y[low_values_flags] = 0
-#         y[high_values_flags] = 1
-#         y_int = y.astype(int)
-#         label_img = label(y_int)
-#         x = regionprops(label_img)
-#         
-#         if len(x) > 0:
-#             for one_rect in x:
-#                 y0, x0 = one_rect.centroid
-#                 regprops.append([x0,y0])
-# =============================================================================
                 
         end = time.time()
         if scores is None:
             scores = np.copy(output)
         else:
             scores = np.vstack((scores, output))
+        
+        self.progress.setValue(float(len(scores))/len(caffe_images)*100)
+        wdg.QApplication.processEvents()
         print 'Processed %s/%s images in %f seconds ...' % (len(scores), len(caffe_images), (end - start))
 
     return scores
@@ -136,7 +117,7 @@ def get_transformer(deploy_file):
     
     return t
 
-def classify(net, deploy_file, image_files,
+def classify(self, net, deploy_file, image_files,
         mean_file=None, labels_file=None, batch_size=None, use_gpu=True):
     """
     Classify some images against a Caffe model and print the results
@@ -151,8 +132,6 @@ def classify(net, deploy_file, image_files,
     labels_file path to a .txt file
     use_gpu -- if True, run inference on the GPU
     """
-    # Load the model and images
-    #net = get_net(caffemodel, deploy_file, use_gpu)
     
     transformer = get_transformer(deploy_file)
     _, channels, height, width = transformer.inputs['data']
@@ -165,41 +144,28 @@ def classify(net, deploy_file, image_files,
     
         
     images = [load_image(image_file, height, width, mode) for image_file in image_files] #- this works if we have multiple images
-    #images = load_image(image_files, height, width,mode)
-    #labels = read_labels(labels_file)
-    
-    print image_files
     
     settings.gInputWidth = width
     settings.gInputHeight = height
-    # Classify the image
     
-    scores = forward_pass(images, net, transformer, batch_size=batch_size)
+    # Classify the image    
+    scores = forward_pass(self, images, net, transformer, batch_size=batch_size)
 
     ### Process the results
     rects = []
     # Format of scores is [ batch_size x max_bbox_per_image x 5 (xl, yt, xr, yb, confidence) ]
     # https://github.com/NVIDIA/caffe/blob/v0.15.13/python/caffe/layers/detectnet/clustering.py#L81
     for i, image_results in enumerate(scores):
-        print '==> Image #%d' % i
         for left, top, right, bottom, confidence in image_results:
             if confidence == 0:
                 continue
-
-            print 'Detected object at [(%d, %d), (%d, %d)] with "confidence" %f' % (
-                int(round(left)),
-                int(round(top)),
-                int(round(right)),
-                int(round(bottom)),
-                confidence,
-            )
+            
             if left<0:left=0
             if top<0:top=0
             if right<0:right=0
             if bottom<0:bottom=0
             
             rects.append([left, top, right, bottom, i])
-            #rects.append([lt[0], lt[1], rb[0], rb[1]])
                  
     return rects
 
@@ -226,7 +192,7 @@ def load_image(path, height, width, mode='RGB'):
     image = scipy.misc.imresize(image, (height, width), 'bilinear')
     return image
 
-def get_net(self, caffemodel, deploy_file, use_gpu=True):
+def get_net(self, caffemodel, deploy_file, use_gpu=False):
     """
     Returns an instance of caffe.Net
 
@@ -240,7 +206,6 @@ def get_net(self, caffemodel, deploy_file, use_gpu=True):
     if use_gpu:
         caffe.set_mode_gpu()
 
-    # load a new model
     net = caffe.Net(deploy_file, caffemodel, caffe.TEST)
            
     return net

@@ -1,4 +1,4 @@
-import sys, os
+import sys
 sys.path.append('../Utils')
 import settings
 from PyQt5.QtCore import QRect, QPoint, Qt
@@ -47,16 +47,15 @@ def set_image(self, imgpath, mode='Single'):
         
         return pixmap_resized
 
-def load_images_from_dir(self, dirpath):
-    
+def load_images_from_dir(self, imagesPath):
+       
     c = 0
-    for filepath in os.listdir(dirpath):
-        if filepath.endswith(self.combo_imgtype.currentText()):
-            self.global_image_path_list.append(os.path.join(dirpath, filepath))
-            c += 1
+    for filepath in imagesPath:
+        self.global_image_path_list.append(filepath)
+        c += 1
     
     if c < 1:
-           QMessageBox.about(self, "ERROR", "Please select the correct image type.")
+           QMessageBox.about(self, "ERROR", "Please select at least one image.")
     else:
         pixmap = set_image(self, self.global_image_path_list[0], mode='Single')
         switch_background(self, pixmap)
