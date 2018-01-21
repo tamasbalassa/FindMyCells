@@ -39,7 +39,7 @@ class MainWindow(wdg.QWidget):
         groupBox1 = wdg.QGroupBox("Menu", self)
         vbox = wdg.QVBoxLayout(groupBox1)
         
-        vbox.addSpacing(80)
+        vbox.addSpacing(50)
         
         # INPUT SECTION
         groupBox1_input = wdg.QGroupBox("INPUT",self)
@@ -55,7 +55,7 @@ class MainWindow(wdg.QWidget):
         vbox1_input.addWidget(load_btn, 1, Qt.AlignTop)
         vbox1_input.addSpacing(10)
                         
-        vbox.addSpacing(120)
+        vbox.addSpacing(80)
         
         # SETTINGS SECTION
         groupBox1_utils = wdg.QGroupBox("SETTINGS", self)
@@ -126,7 +126,7 @@ class MainWindow(wdg.QWidget):
         #verticalSpacer = wdg.QSpacerItem(40, 60, wdg.QSizePolicy.Minimum, wdg.QSizePolicy.Expanding)
         #vbox1_utils.addItem(verticalSpacer)
                 
-        vbox.addSpacing(100)
+        vbox.addSpacing(80)
         
         # OUTPUT SECTION
         
@@ -148,7 +148,7 @@ class MainWindow(wdg.QWidget):
         vbox1_output.addSpacing(10)
         
         
-        vbox.addSpacing(180)
+        vbox.addSpacing(150)
                
         hbox.addWidget(groupBox1, 1)
         
@@ -188,7 +188,7 @@ class MainWindow(wdg.QWidget):
         
     def loadbutton(self):
         self.global_image_path_list = []
-        self.wheelValue = -1
+        self.wheelValue = 0
 
         file_name = wdg.QFileDialog()
         names = file_name.getOpenFileNames(self, "Open files","","Images (*.jpg *.jpeg *.png *.tif *.tiff)")        
