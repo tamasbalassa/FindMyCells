@@ -26,7 +26,7 @@ def change_params_in_deploy(self):
     updated_param_str = ','.join(str(e) for e in params)
     l.python_param.param_str = updated_param_str
     
-    print 'writing', deploy_file
+    print('writing', deploy_file)
     with open(deploy_file, 'w') as f:
         f.write(str(nnet))
 

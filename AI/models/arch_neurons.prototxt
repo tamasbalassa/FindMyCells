@@ -2180,23 +2180,8 @@ layer {
     phase: TEST
   }
   python_param {
-    module: "caffe.layers.detectnet.clustering"
+    module: "custom_caffe_layers.clustering"
     layer: "ClusterDetections"
     param_str: "704, 512, 16,0.01,3, 0.02, 5, 1"
-  }
-}
-layer {
-  name: "score"
-  type: "Python"
-  bottom: "bbox-list-label"
-  bottom: "bbox-list"
-  top: "bbox-list-scored"
-  include {
-    phase: TEST
-    stage: "val"
-  }
-  python_param {
-    module: "caffe.layers.detectnet.mean_ap"
-    layer: "ScoreDetections"
   }
 }

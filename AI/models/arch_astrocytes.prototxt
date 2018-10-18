@@ -2177,7 +2177,7 @@ layer {
   bottom: "bboxes"
   top: "bbox-list"
   python_param {
-    module: "caffe.layers.detectnet.clustering"
+    module: "custom_caffe_layers.clustering"
     layer: "ClusterDetections"
     param_str: "704, 512, 16,0.6,3, 0.02, 22, 1"
   }
