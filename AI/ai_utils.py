@@ -1,6 +1,9 @@
+import os
 import PyQt5.QtWidgets as wdg
 from caffe.proto import caffe_pb2
 import google.protobuf.text_format as txtf
+
+ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 
 # this function is called when the "Set treshold" is pressed
 # it modifies two parameters in the deploy (prototxt) file
@@ -8,6 +11,7 @@ def change_params_in_deploy(self):
     
     nnet = caffe_pb2.NetParameter()    
     deploy_file = '../AI/models/' + self.combo_arch.currentText() + '.prototxt'
+    deploy_file = os.path.join(ROOT_DIR, 'AI', 'models', self.combo_arch.currentText() + '.prototxt')
     
     with open(deploy_file) as f:
         s = f.read()

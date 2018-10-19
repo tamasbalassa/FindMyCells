@@ -4,6 +4,7 @@ import csv
 import PyQt5.QtWidgets as wdg
 import PyQt5.QtGui as qg
 from PyQt5.QtCore import Qt
+
 ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 sys.path.append(os.path.join(ROOT_DIR, 'AI'))
 sys.path.append(os.path.join(ROOT_DIR, 'utils'))
@@ -135,12 +136,19 @@ class MainWindow(wdg.QWidget):
         groupBox1_output = wdg.QGroupBox("OUTPUT", self)
         vbox.addWidget(groupBox1_output)
         vbox1_output = wdg.QVBoxLayout(groupBox1_output)
-        vbox1_output.addSpacing(10)        
-        
+        vbox1_output.addSpacing(10)
+
+        # GPU checkbox
+        self.gpu_checkbox = wdg.QCheckBox('Use GPU', self)
+        self.gpu_checkbox.stateChanged.connect(self.use_gpu_changed)
+        #FMC_settings.useGPU = gpu_checkbox.checkState()
+        vbox1_output.addWidget(self.gpu_checkbox, 1, Qt.AlignTop)
+        vbox1_output.addSpacing(15)
+
         # predict button
         predict_btn = wdg.QPushButton('Predict', self)
         predict_btn.clicked.connect(self.predictbutton)
-        vbox1_output.addWidget(predict_btn, 1, Qt.AlignTop)
+        vbox1_output.addWidget(predict_btn, 1)
         vbox1_output.addSpacing(15)
         
         # statistics button
@@ -168,7 +176,7 @@ class MainWindow(wdg.QWidget):
         self.vbox = vbox3 # to be able to switch the image        
         
         # defaul background
-        background_image_path = os.path.join(ROOT_DIR, "Utils", "FMC.png")
+        background_image_path = os.path.join(ROOT_DIR, "utils", "FMC.png")
         pixmap = set_image(self, background_image_path, mode='Single')
         switch_background(self, pixmap, mode='Start')
         
@@ -199,15 +207,22 @@ class MainWindow(wdg.QWidget):
         load_images_from_dir(self, names[0])
         
         self.setSliderMax(len(self.global_image_path_list))
+
+    def use_gpu_changed(self):
+        if self.gpu_checkbox.checkState() == 0:
+            FMC_settings.use_gpu = False
+        else:
+            FMC_settings.use_gpu = True
         
-    def predictbutton(self):       
+    def predictbutton(self):
         
         pm = set_image(self, self.global_image_path_list[self.wheelValue], mode='Single')
         switch_background(self, pm)
         
         pixmapToPredict = self.vbox.itemAt(0).widget().pixmap()        
         if (type(self.global_image_path_list) is list):
-            rectangles = predict_one(self, [self.global_image_path_list[self.wheelValue]], False) # TODO parameter
+            print(FMC_settings.use_gpu)
+            rectangles = predict_one(self, [self.global_image_path_list[self.wheelValue]], FMC_settings.use_gpu)
             drawRect(pixmapToPredict, rectangles)
         
             pm = set_image(self, pixmapToPredict, mode='Pixmap')
@@ -219,7 +234,7 @@ class MainWindow(wdg.QWidget):
         
         self.progress.setValue(0)
         
-        rectangles = predict_all(self, self.global_image_path_list, False)
+        rectangles = predict_all(self, self.global_image_path_list, FMC_settings.use_gpu)
         
         with open('result.csv', 'wb') as csvfile:
             fieldnames = ['Image Name', 'Cell ID', 'x1', 'y1', 'x2', 'y2']

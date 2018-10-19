@@ -84,7 +84,7 @@ def forward_pass(self, images, net, transformer, batch_size=None):
         
         self.progress.setValue(float(len(scores))/len(caffe_images)*100)
         wdg.QApplication.processEvents()
-        print('Processed %s/%s images in %f seconds ...', (len(scores), len(caffe_images), (end - start)))
+        print('Processed {0}/{1} images in {2} seconds.'.format(len(scores), len(caffe_images), (end - start)))
 
     return scores
 
