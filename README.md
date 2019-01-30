@@ -1,5 +1,9 @@
 # FindMyCells
 
+
+**DUE TO MANY REASONS WE ARE CURRENCTLY CHANGING THE DEEP LEARNING NETWORK**
+
+
 A lightweight python/caffe based framework for cell counting. 
 *(Requires caffe trained models.)*
 
