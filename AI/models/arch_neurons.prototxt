@@ -2182,6 +2182,6 @@ layer {
   python_param {
     module: "custom_caffe_layers.clustering"
     layer: "ClusterDetections"
-    param_str: "704, 512, 16,0.001,3, 0.02, 5, 1"
+    param_str: "704, 512, 16,0.05,3, 0.02, 5, 1"
   }
 }

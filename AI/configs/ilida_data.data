@@ -1,0 +1,6 @@
+classes= 1
+train=AI/configs/train.txt
+valid=AI/configs/val.txt
+names=coco.names
+backup=backup/
+eval=coco

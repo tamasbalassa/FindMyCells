@@ -1,18 +1,30 @@
-import sys
-import os
-import csv
+import sys, os, csv
 import PyQt5.QtWidgets as wdg
 import PyQt5.QtGui as qg
 from PyQt5.QtCore import Qt
+import argparse
 
-ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
-sys.path.append(os.path.join(ROOT_DIR, 'AI'))
-sys.path.append(os.path.join(ROOT_DIR, 'utils'))
-from predict_image_DIGITS import predict_one, predict_all
-from image_utils import switch_background, drawRect, set_image, load_images_from_dir, scroll_image
-from ai_utils import change_params_in_deploy
-import FMC_settings
+ROOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)))
+#from predict_image_DIGITS import predict_one, predict_all
+#from ai_utils import change_params_in_deploy
+#from graphics.image_utils import switch_background, drawRect, set_image, load_images_from_dir, scroll_image
+from graphics.image_utils import *
+from util.FMC_settings import *
 
+from AI.torch_utils import predict_image_torch
+
+parser_predict = argparse.ArgumentParser()
+#parser_predict.add_argument('--image_folder', type=str, default='samples', help='path to dataset')
+parser_predict.add_argument('--config_path', type=str, default='AI/configs/yolov3.cfg', help='path to model config file')
+parser_predict.add_argument('--weights_path', type=str, default='AI/models/yolov3.weights', help='path to weights file')
+parser_predict.add_argument('--class_path', type=str, default='coco.names', help='path to class label file')
+parser_predict.add_argument('--conf_thres', type=float, default=0.8, help='object confidence threshold')
+parser_predict.add_argument('--nms_thres', type=float, default=0.4, help='iou thresshold for non-maximum suppression')
+parser_predict.add_argument('--batch_size', type=int, default=1, help='size of the batches')
+parser_predict.add_argument('--n_cpu', type=int, default=2, help='number of cpu threads to use during batch generation')
+parser_predict.add_argument('--img_size', type=int, default=416, help='size of each image dimension')
+parser_predict.add_argument('--use_cuda', type=bool, default=False, help='whether to use cuda if available')
+opt_predict = parser_predict.parse_args()
 
 class MainWindow(wdg.QWidget):
     
@@ -23,7 +35,7 @@ class MainWindow(wdg.QWidget):
         
         self.wheelValue = 0
 
-        FMC_settings.init()
+        FMC_init()
         
         self.setGeometry(200, 50, 1500, 950)
         self.labels = []
@@ -176,7 +188,7 @@ class MainWindow(wdg.QWidget):
         self.vbox = vbox3 # to be able to switch the image        
         
         # defaul background
-        background_image_path = os.path.join(ROOT_DIR, "utils", "FMC.png")
+        background_image_path = os.path.join(ROOT_DIR, "util", "FMC.png")
         pixmap = set_image(self, background_image_path, mode='Single')
         switch_background(self, pixmap, mode='Start')
         
@@ -210,9 +222,9 @@ class MainWindow(wdg.QWidget):
 
     def use_gpu_changed(self):
         if self.gpu_checkbox.checkState() == 0:
-            FMC_settings.use_gpu = False
+            FMC_use_gpu = False
         else:
-            FMC_settings.use_gpu = True
+            FMC_use_gpu = True
         
     def predictbutton(self):
         
@@ -221,20 +233,24 @@ class MainWindow(wdg.QWidget):
         
         pixmapToPredict = self.vbox.itemAt(0).widget().pixmap()        
         if (type(self.global_image_path_list) is list):
-            print(FMC_settings.use_gpu)
-            rectangles = predict_one(self, [self.global_image_path_list[self.wheelValue]], FMC_settings.use_gpu)
-            drawRect(pixmapToPredict, rectangles)
-        
+            print(FMC_use_gpu)
+            print([self.global_image_path_list[self.wheelValue]])
+            #rectangles = predict_one(self, [self.global_image_path_list[self.wheelValue]], FMC_settings.use_gpu)
+            rectangles, colors, labels = predict_image_torch(opt_predict, [self.global_image_path_list[self.wheelValue]])
+            print(rectangles, colors, labels)
+            drawMulticlassRect(pixmapToPredict, rectangles, colors, labels)
+            #pix = qg.QPixmap.fromImage(rectangles)
+
             pm = set_image(self, pixmapToPredict, mode='Pixmap')
             switch_background(self, pm)
-            
+
         self.progress.setValue(0)
        
     def statisticsbutton(self):
         
         self.progress.setValue(0)
         
-        rectangles = predict_all(self, self.global_image_path_list, FMC_settings.use_gpu)
+        rectangles = predict_all(self, self.global_image_path_list, FMC_use_gpu)
         
         with open('result.csv', 'wb') as csvfile:
             fieldnames = ['Image Name', 'Cell ID', 'x1', 'y1', 'x2', 'y2']

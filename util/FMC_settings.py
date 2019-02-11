@@ -1,4 +1,4 @@
-def init():
+def FMC_init():
     global gWidth
     gWidth = 1200
     
@@ -12,5 +12,5 @@ def init():
     gInputHeight = 0
 
 
-global use_gpu
-use_gpu = False
+global FMC_use_gpu
+FMC_use_gpu = False
