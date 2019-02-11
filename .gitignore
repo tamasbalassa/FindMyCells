@@ -1,2 +1,4 @@
 doc/*
 *.pyc
+graphics/__pycache__
+graphics/__pycache__/*
